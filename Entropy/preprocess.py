@@ -44,6 +44,16 @@ def word_seg(path):
     
     return seg_list
 
+def char_seg(path):
+    """对path指向文本进行分字，返回以空格分隔单词的文本"""
+    with open(path, "r", encoding="ANSI") as f:
+        data = f.read().replace('\u3000','').replace('\n','').replace(' ','')
+        text = cut_sentences(data)
+        f.close()
+        char_list = [" ".join([char for char in e]) for e in text]
+    
+    return char_list
+
 def is_chinese(uchar):
     if uchar >= '\u4e00' and uchar <= '\u9fa5':
         return True
@@ -74,6 +84,24 @@ def word_seg_tolist(path):
             seg_list.append(jieba.lcut(e, use_paddle=True, cut_all=False))  
     return seg_list
 
+def char_seg_tolist(path):
+    """对path指向文本进行分字，返回各个单词的列表"""
+    with open(path, "r", encoding="ANSI") as f:
+        data = f.read()
+        data = cut_sentences(data)
+        content_str = []
+        for sentence in data:
+            str = ''
+            for i in sentence:
+                if is_chinese(i) or is_number(i):
+                    str = str + i
+            content_str.append(str)
+        f.close()
+        char_list = []
+        for e in content_str:
+            char_list.append([char for char in e])  
+    return char_list
+
 if __name__ == "__main__":
     # merge_text('text','merged.txt')
-    word_seg_tolist('越女剑.txt')
+    print(char_seg_tolist('text/新华社六评俄乌冲突.txt'))
