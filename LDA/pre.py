@@ -16,13 +16,15 @@ def get_para(path,min_char):
                 tmp_char = tmp_char[:-1]
                 if len(tmp_char) >= min_char:
                     paras.append(tmp_char)
-                tmp_char = ''
+                    tmp_char = ''
+                else:
+                    continue
             if (i + 1) == l:
                 if len(tmp_char) >= min_char:
                     paras.append(tmp_char)
                 break
     f.close()
-    paras = paras[::int(len(paras)/22)][0:22]
+    paras = paras[::int(len(paras)/15)][0:15]
     return paras
   
 def word_seg(text):
@@ -38,9 +40,11 @@ def docs_gen(sourcepath, stpwrdpath, char_len):
     seg_list = []
     for file in files:
         fullpath = sourcepath + '\\' + file
-        # filename = file[:-4]
         seg_list.extend(word_seg(get_para(fullpath, char_len)))
-    vec = CountVectorizer(token_pattern = r"(?u)\b\w\w+\b", ngram_range=(1,1), stop_words=stpwrdlst, max_df=6)
+    vec = CountVectorizer(token_pattern = r"(?u)\b\w\w+\b", 
+                          max_features = 5000,
+                          stop_words = stpwrdlst, 
+                          max_df = 0.5)
     cnt = vec.fit_transform(seg_list)
     # print( 'vocabulary dic :\n\n',vec.vocabulary_)
     return cnt,vec
@@ -53,6 +57,7 @@ def print_top_words(model, feature_names, n_top_words):
         tword.append(topic_w)
         print(topic_w)
     return tword
+
 # def gibbs():
  
 def print_res(model, res):
@@ -68,7 +73,7 @@ def print_res(model, res):
                 para_list.append(i)
         print(para_list)   
             
-n_topics = 9          
+n_topics = 14          
         
 if __name__ == "__main__":
     cnt,v = docs_gen('LDA/text', 'LDA/cn_stopwords.txt', 1000)
