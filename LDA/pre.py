@@ -1,7 +1,9 @@
 import jieba
 import os
+import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
+
 
 def get_para(path,min_char):
     with open(path, "r", encoding="ANSI") as f:
@@ -15,13 +17,13 @@ def get_para(path,min_char):
             if char == '\n':
                 tmp_char = tmp_char[:-1]
                 if len(tmp_char) >= min_char:
-                    paras.append(tmp_char)
+                    paras.append(tmp_char[0:min_char])
                     tmp_char = ''
                 else:
                     continue
             if (i + 1) == l:
                 if len(tmp_char) >= min_char:
-                    paras.append(tmp_char)
+                    paras.append(tmp_char[0:min_char])
                 break
     f.close()
     paras = paras[::int(len(paras)/15)][0:15]
@@ -32,7 +34,27 @@ def word_seg(text):
     seg_list = [" ".join(jieba.lcut(e, use_paddle=True, cut_all=False)) for e in text]
     return seg_list            
 
-def docs_gen(sourcepath, stpwrdpath, char_len):
+def novel_gen(sourcepath, stpwrdpath,):
+    files = os.listdir(sourcepath)
+    with open(stpwrdpath, 'rb') as fp:
+        stopword = fp.read().decode('utf-8') 
+    stpwrdlst = stopword.splitlines()
+    seg_list = []
+    for file in files:
+        fullpath = sourcepath + '\\' + file
+        with open(fullpath, "r", encoding="ANSI") as f:
+            data = f.read().replace('\u3000','').replace('\n','').replace(' ','')
+        seg = " ".join(jieba.lcut(data, use_paddle=True, cut_all=False))
+        seg_list.append(seg)
+    vec = CountVectorizer(token_pattern = r"(?u)\b\w\w+\b", 
+                          stop_words = stpwrdlst, 
+                          max_df = 0.5)
+    cnt = vec.fit_transform(seg_list)
+    # print( 'vocabulary dic :\n\n',vec.vocabulary_)
+    return cnt,vec
+
+
+def docs_gen(sourcepath, stpwrdpath, char_len, voc):
     files = os.listdir(sourcepath)
     with open(stpwrdpath, 'rb') as fp:
         stopword = fp.read().decode('utf-8') 
@@ -44,7 +66,8 @@ def docs_gen(sourcepath, stpwrdpath, char_len):
     vec = CountVectorizer(token_pattern = r"(?u)\b\w\w+\b", 
                           max_features = 5000,
                           stop_words = stpwrdlst, 
-                          max_df = 0.5)
+                          max_df = 0.5,
+                          vocabulary = voc)
     cnt = vec.fit_transform(seg_list)
     # print( 'vocabulary dic :\n\n',vec.vocabulary_)
     return cnt,vec
@@ -71,17 +94,32 @@ def print_res(model, res):
         for i,value in enumerate(max_idx):
             if value == topic_idx:
                 para_list.append(i)
-        print(para_list)   
-            
-n_topics = 14          
+        print(para_list)
+        
+        
+def print_res2(res1, res2):
+    match = 0
+    for j, p2 in enumerate(res2):
+        dis = [] 
+        for i, p1 in enumerate(res1):
+            dis.append(np.sqrt(np.sum((p1-p2)**2)))  
+        match_idx = dis.index(min(dis))
+        print(j,'→',match_idx)
+        if (int(j/15) == match_idx):
+            match += 1
+    print('正确率: %f %%' %(match/len(res2)*100))    
+    
+n_topics = 14        
         
 if __name__ == "__main__":
-    cnt,v = docs_gen('LDA/text', 'LDA/cn_stopwords.txt', 1000)
+    # cnt1,v1 = docs_gen('LDA/text', 'LDA/cn_stopwords.txt', 3000)
+    cnt1,v1 = novel_gen('LDA/text', 'LDA/cn_stopwords.txt')
     lda = LatentDirichletAllocation(n_components = n_topics, 
                                     random_state = 0,
                                     max_iter = 100)
-    res = lda.fit_transform(cnt)
-    print_top_words(lda,v.get_feature_names(),10)
-    res = print_res(lda,res)
-    print(res, '当前训练的perplexity', lda.perplexity(cnt), sep='\n')
-    
+    res1 = lda.fit_transform(cnt1)
+    print_top_words(lda,v1.get_feature_names(),10)
+    print_res(lda,res1)
+    cnt2,v2 = docs_gen('LDA/text', 'LDA/cn_stopwords.txt', 2000, v1.vocabulary_)
+    res2 = lda.transform(cnt2)
+    print_res2(res1, res2)
