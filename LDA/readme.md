@@ -32,7 +32,21 @@
 
 ### 2.2 基于变分 EM 算法的模型训练
 
-LDA 模型的学习
+​	LDA 模型的学习可通过 Gibbs 采样或 EM 算法实现。本文使用变分 EM 算法进行训练。
+
+​	变分推理是一种确定式的近似推理方法。我们想学习 LDA 模型中隐变量的后验分布 $p(z|x)$ ，考虑用 $q(z)$ （变分分布）近似该分布，用 KL 散度计算两者相似度。我们希望找到与 $p(z|x)$ 在 KL 散度意义下最近的分布 $q^*(z)$ 。变分推理通过最大化证据下界 $L(q,\theta)$ 来最小化 KL 散度。
+
+​	而变分 EM 算法则是通过迭代的方法最大化证据下界。它是 EM 算法的推广，也是循环执行 E 步和 M 步直至收敛：
+
+1. E 步：固定 $\theta$ ，求 $L(q,\theta)$ 对 $q$ 的最大化
+2. M 步：固定 $q$ ，求 $L(q,\theta)$ 对 $\theta$ 的最大化
+
+​	在 LDA 模型中，变分 EM 算法如下：
+
+1. 给定文本集合 $D=\{ \mathrm w_{1},\cdots,\mathrm w_{M}\}$ 
+2. 循环执行 E 步和 M 步直至收敛：
+   1. E 步：固定模型参数 $\alpha,\varphi$ ，通过 $L(q,\theta)$ 关于变分参数 $\gamma,\eta$ 的最大化，估计 $\gamma,\eta$ 
+   2. M 步：固定变分参数 $\gamma,\eta$ ，通过 $L(q,\theta)$ 关于模型参数 $\alpha,\varphi$ 的最大化，估计 $\alpha,\varphi$ ；根据 $\gamma,\eta$ 可估计模型参数 $\theta,\bold z$
 
 ## 3 代码
 
@@ -176,6 +190,8 @@ Topic #13:
 [10]
 `````
 
+​	此处 0-13 分别表示 三十三剑客图，书剑恩仇录，侠客行，倚天屠龙记，天龙八部，射雕英雄传，白马啸西风，碧血剑，神雕侠侣，笑傲江湖，连城诀，雪山飞狐，飞狐外传，鹿鼎记。
+
 ​	使用训练完成的模型对 210 个文档的分类。文档-主题的概率也可以验证主题与小说向对应的猜测，例如《倚天屠龙记》中抽取的 15 个文档对应的概率向量为：
 
 `````mathematica
@@ -259,5 +275,7 @@ array([[8.53071813e-01, 2.76854928e-04, 2.76854928e-04, 2.76855594e-04,
 
 ## 参考文献
 <div id="refer-anchor-1"></div>[1] 李航, 统计学习方法. 清华大学出版社, 2012.
+
 <div id="refer-anchor-2"></div>[2] “Online Learning for Latent Dirichlet Allocation”, Matthew D. Hoffman, David M. Blei, Francis Bach, 2010. https://github.com/blei-lab/onlineldavb
 
+<div id="refer-anchor-3"></div>[3] "Topic extraction with Non-negative Matrix Factorization and Latent Dirichlet Allocation — scikit-learn 1.0.2 documentation". https://scikit-learn.org/stable/auto_examples/applications/plot_topics_extraction_with_nmf_lda.html#sphx-glr-auto-examples-applications-plot-topics-extraction-with-nmf-lda-py
