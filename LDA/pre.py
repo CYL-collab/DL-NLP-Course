@@ -1,6 +1,5 @@
 import jieba
 import os
-import pickle
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
 
@@ -39,21 +38,45 @@ def docs_gen(sourcepath, stpwrdpath, char_len):
     seg_list = []
     for file in files:
         fullpath = sourcepath + '\\' + file
-        filename = file[:-4]
+        # filename = file[:-4]
         seg_list.extend(word_seg(get_para(fullpath, char_len)))
-    vec = CountVectorizer(token_pattern = r"(?u)\b\w+\b", ngram_range=(1,1), min_df = 1, stop_words=stpwrdlst)
+    vec = CountVectorizer(token_pattern = r"(?u)\b\w\w+\b", ngram_range=(1,1), stop_words=stpwrdlst, max_df=6)
     cnt = vec.fit_transform(seg_list)
     # print( 'vocabulary dic :\n\n',vec.vocabulary_)
-    return cnt
+    return cnt,vec
 
+def print_top_words(model, feature_names, n_top_words):
+    tword = []
+    for topic_idx, topic in enumerate(model.components_):
+        print("Topic #%d:" % topic_idx)
+        topic_w = " ".join([feature_names[i] for i in topic.argsort()[:-n_top_words - 1:-1]])
+        tword.append(topic_w)
+        print(topic_w)
+    return tword
 # def gibbs():
-    
+ 
+def print_res(model, res):
+    max_idx = [] 
+    for prob in res:
+        prob = prob.tolist()
+        max_idx.append(prob.index(max(prob)))   
+    for topic_idx, _ in enumerate(model.components_):
+        para_list = []
+        print("Topic #%d:" % topic_idx)
+        for i,value in enumerate(max_idx):
+            if value == topic_idx:
+                para_list.append(i)
+        print(para_list)   
+            
+n_topics = 9          
         
 if __name__ == "__main__":
-    cnt = docs_gen('LDA/text', 'LDA/cn_stopwords.txt', 1000)
-    lda = LatentDirichletAllocation(n_components = 2, 
-                                    learning_offset = 50,
-                                    random_state = 0)
+    cnt,v = docs_gen('LDA/text', 'LDA/cn_stopwords.txt', 1000)
+    lda = LatentDirichletAllocation(n_components = n_topics, 
+                                    random_state = 0,
+                                    max_iter = 100)
     res = lda.fit_transform(cnt)
-    print(res)
+    print_top_words(lda,v.get_feature_names(),10)
+    res = print_res(lda,res)
+    print(res, '当前训练的perplexity', lda.perplexity(cnt), sep='\n')
     
